@@ -657,10 +657,13 @@ mixture_fnode_t::message(size_t i)
 
         for (factor_nodes_t::iterator it = _factor_nodes.begin();
              it != _factor_nodes.end(); it++) {
-                theta.push_back(exp((*it)()));
+                theta.push_back((*it)());
         }
         debug("mixture message 1 (categorical): " << this->name() << endl);
-        distribution1 = categorical_distribution_t(theta);
+        // use log probabilities to initialize the distribution
+        distribution1 = categorical_distribution_t(theta.size());
+        distribution1.parameters() = theta;
+        distribution1.renormalize();
         debug(endl);
 
         return distribution1;
