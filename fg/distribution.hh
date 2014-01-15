@@ -662,14 +662,15 @@ public:
                 }
                 return h;
         }
-        virtual statistics_t statistics(const vector_t& x) const {
+        virtual statistics_t statistics(double x) const {
                 statistics_t T(k());
-                for (size_t i = 0; i < x.size(); i++) {
-                        assert(x[i] < k());
-                        T[x[i]] += 1.0;
-                }
+                assert(x < k());
+                T[x] += 1.0;
                 T.n = 1;
                 return T;
+        }
+        virtual statistics_t statistics(const vector_t& x) const {
+                return statistics(x[0]);
         }
 };
 
