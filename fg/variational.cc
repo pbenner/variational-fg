@@ -476,11 +476,10 @@ categorical_fnode_t::message1() {
         // expectation of log theta
         vector_t theta = _links[1]();
 
-        BOOST_FOREACH(double& t, theta) {
-                t = max(numeric_limits<double>::min(), exp(t));
-        }
         debug("categorical message 1 (categorical): " << this->name() << endl);
-        distribution1 = categorical_distribution_t(theta);
+        distribution1 = categorical_distribution_t(theta.size());
+        distribution1.parameters() = theta;
+        distribution1.renormalize();
         debug(endl);
 
         return distribution1;
