@@ -18,6 +18,7 @@ libfg_la_SOURCES = \
 	factor-graph.cc \
 	factor-graph.hh \
 	hotnews.hh \
+	logarithmetics.hh \
 	messages.hh \
 	node-set.hh \
 	node-types.hh \

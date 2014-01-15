@@ -38,6 +38,7 @@
 #include <fg/clonable.hh>
 #include <fg/default-operator.hh>
 #include <fg/debug.hh>
+#include <fg/logarithmetics.hh>
 
 // data type for saving natural statistics
 ////////////////////////////////////////////////////////////////////////////////
@@ -179,6 +180,7 @@ public:
                 double tmp = 0.0;
                 // compute dot product
                 for (size_t i = 0; i < k(); i++) {
+                        debug(boost::format("-> T[%d]: %f") % i % T[i] << std::endl);
                         tmp += parameters()[i]*T[i];
                 }
                 return base_measure(x)*std::exp(tmp - log_partition());
@@ -594,13 +596,19 @@ public:
 
         // void object
         categorical_distribution_t(size_t k) :
-                base_t(k, 0, discrete_domain_t(k)) {
+                base_t(k, 0, discrete_domain_t(1)) {
         }
-        categorical_distribution_t(const vector_t& theta) :
-                base_t(theta.size(), 1.0, discrete_domain_t(theta.size())) {
+        categorical_distribution_t(const vector_t& theta, bool natural = false) :
+                base_t(theta.size(), 1.0, discrete_domain_t(1)) {
                 for (size_t i = 0; i < theta.size(); i++) {
-                        assert(theta[i] > 0.0);
-                        parameters()[i] = std::log(theta[i]);
+                        if (natural) {
+                                assert(theta[i] <= 1.0);
+                                parameters()[i] = theta[i];
+                        }
+                        else {
+                                assert(theta[i] >= 0.0);
+                                parameters()[i] = std::log(theta[i]);
+                        }
                 }
                 renormalize();
         }
@@ -628,13 +636,13 @@ public:
                 if (!base_t::renormalize()) {
                         return false;
                 }
-                double sum = 0.0;
+                double sum = -std::numeric_limits<double>::infinity();
                 debug("-> categorical parameters:" << std::endl);
                 for (size_t i = 0; i < k(); i++) {
-                        sum += std::exp(parameters()[i]);
+                        sum = logadd(sum, parameters()[i]);
                 }
                 for (size_t i = 0; i < k(); i++) {
-                        parameters()[i] -= std::log(sum);
+                        parameters()[i] -= sum;
                         debug(boost::format("-> theta[%i]: %d\n") % i % std::exp(parameters()[i]));
                 }
                 _log_partition = 0.0;
