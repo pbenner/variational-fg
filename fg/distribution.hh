@@ -602,7 +602,6 @@ public:
                 base_t(theta.size(), 1.0, discrete_domain_t(1)) {
                 for (size_t i = 0; i < theta.size(); i++) {
                         if (natural) {
-                                assert(theta[i] <= 1.0);
                                 parameters()[i] = theta[i];
                         }
                         else {
