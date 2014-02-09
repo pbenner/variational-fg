@@ -155,7 +155,7 @@ factor_graph_t::operator()(boost::optional<size_t> n) {
                         free_energy_new += (**it)();
                 }
                 history.push_back(free_energy_new);
-                if (!n && std::fabs(free_energy_new - free_energy_old) < 0.01) {
+                if (!n && std::fabs(free_energy_new - free_energy_old) < 0.0001) {
                         break;
                 }
                 free_energy_old = free_energy_new;
