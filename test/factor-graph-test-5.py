@@ -90,6 +90,7 @@ def plot_fg(fg, data1, data2, bound):
 def test1():
     data = [0.0,1.0]
     fg = construct_fg(data)
+    fg.init()
     print fg()
     for i in range(len(data)):
         print "z[{}]: {{{}, {}}}".format(i, fg["z",i].moments(0), fg["z",i].moments(1))
@@ -106,6 +107,7 @@ def test2():
     data  = np.append(data1, data2)
     # construct and execute the factor graph
     fg = construct_fg(data)
+    fg.init()
     bound = fg()
     plot_fg(fg, data1, data2, bound[3:])
 

@@ -69,6 +69,7 @@ data  = np.random.normal(mu, sigma, 1000)
 
 # construct and execute the factor graph
 fg = construct_fg(data)
+fg.init()
 bound = fg()
 
 plot_fg(fg, data, bound)

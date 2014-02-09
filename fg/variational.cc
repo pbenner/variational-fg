@@ -544,33 +544,11 @@ mixture_fnode_t::operator+=(const factor_node_i& factor_node)
 mixture_fnode_t&
 mixture_fnode_t::operator+=(factor_node_i* factor_node)
 {
-        // observe this node
-        factor_node->observe(boost::bind(&mixture_fnode_t::notify, this));
         // add the factor node to the list of nodes
         _factor_nodes.push_back(factor_node);
         // add an additional component to the categorical distribution
         distribution1 = categorical_distribution_t(distribution1.k()+1);
         return *this;
-}
-
-void
-mixture_fnode_t::notify() const
-{
-        ssize_t index = _neighbors.index("indicator");
-        if (index != -1 && _neighbors[index] != NULL) {
-                _neighbors[index]->notify();
-        }
-        base_t::notify();
-}
-
-void
-mixture_fnode_t::notify_neighbors(const variable_node_i& variable_node) const
-{
-        for (factor_nodes_t::const_iterator it = _factor_nodes.begin();
-             it != _factor_nodes.end(); it++) {
-                it->notify_neighbors(variable_node);
-        }
-        base_t::notify();
 }
 
 bool

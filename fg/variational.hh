@@ -285,8 +285,6 @@ public:
         mixture_fnode_t& operator+=(      factor_node_i* factor_node);
 
         virtual const neighbors_t& neighbors() const;
-        virtual void notify() const;
-        virtual void notify_neighbors(const variable_node_i& variable_node) const;
 
         virtual bool link(const std::string& tag1, const std::string& tag2, variable_node_i& variable_node);
         virtual bool link(const std::string& tag, variable_node_i& variable_node, p_map_t f);

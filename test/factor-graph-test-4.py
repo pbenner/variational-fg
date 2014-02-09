@@ -44,4 +44,5 @@ data = [0]
 
 # construct and execute the factor graph
 fg = construct_fg(data)
+fg.init()
 bound = fg()

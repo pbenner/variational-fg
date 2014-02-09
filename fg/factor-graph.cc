@@ -30,19 +30,13 @@ using namespace std;
 
 factor_graph_t::factor_graph_t() :
         _factor_nodes   (),
-        _variable_nodes (),
-        _factor_queue   (),
-        _variable_queue (),
-        _energy_cache   ()
+        _variable_nodes ()
 {
 }
 
 factor_graph_t::factor_graph_t(const factor_graph_t& factor_graph) :
         _factor_nodes   (),
-        _variable_nodes (),
-        _factor_queue   (),
-        _variable_queue (),
-        _energy_cache   ()
+        _variable_nodes ()
 {
         // clone all nodes of the factor graph
         clone_nodes(factor_graph._factor_nodes,
@@ -59,7 +53,6 @@ factor_graph_t&
 factor_graph_t::operator+=(factor_node_i* factor_node)
 {
         _factor_nodes += factor_node;
-        factor_node->observe(boost::bind(&factor_graph_t::add_factor_node, this, factor_node));
 
         return *this;
 }
@@ -74,7 +67,6 @@ factor_graph_t&
 factor_graph_t::operator+=(variable_node_i* variable_node)
 {
         _variable_nodes += variable_node;
-        variable_node->observe(boost::bind(&factor_graph_t::add_variable_node, this, variable_node));
 
         return *this;
 }
@@ -110,109 +102,92 @@ factor_graph_t::link(const string& tag, const std::string& vname)
 
         bool result = false;
 
-        for (factor_set_t::iterator it = _factor_nodes[tag1];
-             it != _factor_nodes.end() && it->name() == tag1; it++) {
-                for (variable_set_t::iterator is = _variable_nodes[vname];
-                     is != _variable_nodes.end() && is->name() == vname; is++) {
+        factor_set_t::range range1 = _factor_nodes.find(tag1);
+        for (factor_set_t::range::iterator it = range1.begin();
+             it != range1.end(); it++) {
+                variable_set_t::range range2 = _variable_nodes.find(vname);
+                for (variable_set_t::range::iterator is = range2.begin();
+                     is != range2.end(); is++) {
                         result |= it->link(tag2, *is);
                 }
         }
         return result;
 }
 
-vector<double>
-factor_graph_t::operator()(boost::optional<size_t> n) {
+void
+factor_graph_t::init()
+{
         boost::random::mt19937 generator;
         generator.seed(rand());
-        // a cache for the free energy
-        // and a thread safe vector for the results
-        vector<double> history;
-        // limit the number of jobs
-        _variable_queue.set_limit(n);
-        // initialize queue
         for (variable_set_t::iterator it = _variable_nodes.begin();
              it != _variable_nodes.end(); it++) {
-                _energy_cache.update(&*it, it->init(generator));
-                it->notify();
+                it->init(generator);
         }
         for (factor_set_t::iterator it = _factor_nodes.begin();
              it != _factor_nodes.end(); it++) {
-                _energy_cache.update(&*it, it->init(generator));
+                it->init(generator);
         }
-        history.push_back(free_energy());
+}
+
+vector<double>
+factor_graph_t::operator()(boost::optional<size_t> n) {
+        double free_energy_new = 0.0;
+        double free_energy_old = -std::numeric_limits<double>::max();
+        vector<double> history;
         // iterate network
-        while (variable_node_i* job = _variable_queue.pop()) {
+        for (size_t i = 0; !n || i < *n; i++) {
                 debug("--------------------------------------------------------------------------------"
                       << std::endl);
-                _energy_cache.update(job, (*job)());
-                history.push_back(free_energy());
+                // reset free energy
+                free_energy_new = 0.0;
+                for (variable_set_t::iterator it = _variable_nodes.begin();
+                     it != _variable_nodes.end(); it++) {
+                        free_energy_new += (*it)();
+                }
+                for (factor_set_t::iterator it = _factor_nodes.begin();
+                     it != _factor_nodes.end(); it++) {
+                        free_energy_new += (*it)();
+                }
+                history.push_back(free_energy_new);
+                if (std::fabs(free_energy_new - free_energy_old) < 0.01) {
+                        break;
+                }
+                free_energy_old = free_energy_new;
         }
         return history;
 }
 
-double
-factor_graph_t::free_energy()
-{
-        while (factor_node_i* job = _factor_queue.pop()) {
-                _energy_cache.update(job, (*job)());
-        }
-        return _energy_cache();
-}
-
 boost::optional<const exponential_family_i&>
-factor_graph_t::distribution(const string& name, size_t i) const
+factor_graph_t::distribution(const string& name, ssize_t i) const
 {
-        variable_set_t::const_iterator it = _variable_nodes[name];
-        // advance iterator i steps
-        advance(it, i);
+        variable_set_t::const_range range = _variable_nodes.find(name);
 
-        if (it == _variable_nodes.cend() ||
-            it->name() != name) {
-                return boost::optional<const exponential_family_i&>();
+        if (i < range.size()) {
+                return range[i].distribution();
         }
-        return it->distribution();
+        return boost::optional<const exponential_family_i&>();
 }
 
 boost::optional<const variable_node_i&>
-factor_graph_t::variable_node(const string& name, size_t i) const
+factor_graph_t::variable_node(const string& name, ssize_t i) const
 {
-        variable_set_t::const_iterator it = _variable_nodes[name];
-        // advance iterator i steps
-        advance(it, i);
+        variable_set_t::const_range range = _variable_nodes.find(name);
 
-        if (it == _variable_nodes.cend() ||
-            it->name() != name) {
-                return boost::optional<const variable_node_i&>();
+        if (i < range.size()) {
+                return range[i];
         }
-        return *it;
+        return boost::optional<const variable_node_i&>();
 }
 
 boost::optional<variable_node_i&>
-factor_graph_t::variable_node(const string& name, size_t i)
+factor_graph_t::variable_node(const string& name, ssize_t i)
 {
-        variable_set_t::iterator it = _variable_nodes[name];
-        // advance iterator i steps
-        advance(it, i);
+        variable_set_t::range range = _variable_nodes.find(name);
 
-        if (it == _variable_nodes.end() ||
-            it->name() != name) {
-                return boost::optional<variable_node_i&>();
+        if (i < range.size()) {
+                return range[i];
         }
-        return *it;
-}
-
-void
-factor_graph_t::add_factor_node(factor_node_i* factor_node) {
-        debug(boost::format("*** adding factor node %s:%x to the queue ***\n")
-              % factor_node->name() % factor_node);
-        _factor_queue.push(factor_node);
-}
-
-void
-factor_graph_t::add_variable_node(variable_node_i* variable_node) {
-        debug(boost::format("*** adding variable node %s:%x to the queue ***\n")
-              % variable_node->name() % variable_node);
-        _variable_queue.push(variable_node);
+        return boost::optional<variable_node_i&>();
 }
 
 void

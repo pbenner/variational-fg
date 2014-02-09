@@ -194,5 +194,6 @@ BOOST_PYTHON_MODULE(interface)
                 .def("variable_node", static_cast<variable_node_i& (*)(factor_graph_t&, const std::string&)>(&access_variable_node), return_internal_reference<>())
                 .def("variable_node", static_cast<variable_node_i& (*)(factor_graph_t&, const std::string&, size_t)>(&access_variable_node), return_internal_reference<>())
                 .def("link", &factor_graph_t::link)
+                .def("init", &factor_graph_t::init)
                 ;
 }

@@ -29,4 +29,5 @@ data = [0,0,0,1,1,2,1,1,2,0]
 
 # construct and execute the factor graph
 fg = construct_fg(data)
+fg.init()
 bound = fg()

@@ -31,7 +31,6 @@
 
 #include <fg/node-set.hh>
 #include <fg/node-types.hh>
-#include <fg/queue.hh>
 #include <fg/default-operator.hh>
 
 class factor_graph_t {
@@ -68,24 +67,19 @@ public:
         // execute the message passing algorithm
         std::vector<double> operator()(boost::optional<size_t> n = boost::optional<size_t>());
 
-        // compute free energy
-        double free_energy();
+        // initialize network
+        void init();
 
         // access distributions of variable nodes
-        boost::optional<const exponential_family_i&> distribution(const std::string& name, size_t i = 0) const;
+        boost::optional<const exponential_family_i&> distribution(const std::string& name, ssize_t i = 0) const;
 
         // access variable nodes
-        boost::optional<const variable_node_i&> variable_node(const std::string& name, size_t i = 0) const;
-        boost::optional<variable_node_i&> variable_node(const std::string& name, size_t i = 0);
+        boost::optional<const variable_node_i&> variable_node(const std::string& name, ssize_t i = 0) const;
+        boost::optional<variable_node_i&> variable_node(const std::string& name, ssize_t i = 0);
 
 protected:
         factor_set_t _factor_nodes;
         variable_set_t _variable_nodes;
-        // queue of nodes that need to send messages
-        fg_queue_t<factor_node_i> _factor_queue;
-        fg_queue_t<variable_node_i> _variable_queue;
-        // cached free energy values
-        cache_t<fg_node_i> _energy_cache;
 private:
         // insert nodes without cloning them
         factor_graph_t& operator+=(factor_node_i* factor_node);
@@ -93,9 +87,6 @@ private:
         // clone a whole network
         void clone_nodes(const factor_set_t& factor_nodes,
                          const variable_set_t& variable_nodes);
-        // add a nodes to the queue
-        void add_factor_node(factor_node_i* factor_node);
-        void add_variable_node(variable_node_i* variable_node);
 };
 
 #endif /* __TFBAYES_FG_FACTOR_GRAPH_HH__ */

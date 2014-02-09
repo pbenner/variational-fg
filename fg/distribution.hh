@@ -635,7 +635,7 @@ public:
                 if (!base_t::renormalize()) {
                         return false;
                 }
-                double sum = -std::numeric_limits<double>::infinity();
+                double sum = -std::numeric_limits<double>::max();
                 debug("-> categorical parameters:" << std::endl);
                 for (size_t i = 0; i < k(); i++) {
                         sum = logadd(sum, parameters()[i]);

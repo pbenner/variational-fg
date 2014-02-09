@@ -38,7 +38,6 @@
 #include <fg/debug.hh>
 #include <fg/linalg.hh>
 #include <fg/named-ptr.hh>
-#include <fg/observable.hh>
 
 // links between nodes
 ////////////////////////////////////////////////////////////////////////////////
@@ -74,9 +73,9 @@ public:
 // interfaces
 ////////////////////////////////////////////////////////////////////////////////
 
-// a general node in a factor graph must be clonable, observable,
+// a general node in a factor graph must be clonable
 // and be able to compute it's contribution to the free energy
-class fg_node_i : public virtual clonable, public virtual observable_i {
+class fg_node_i : public virtual clonable {
 public:
         virtual ~fg_node_i() { }
 
@@ -107,9 +106,6 @@ public:
 
         // neighboring variable nodes
         virtual const neighbors_t& neighbors() const = 0;
-
-        // notify neighbors
-        virtual void notify_neighbors(const variable_node_i& variable_node) const = 0;
 };
 
 class variable_node_i : public virtual fg_node_i {
@@ -133,9 +129,6 @@ public:
         // get the type of the distribution this node represents
         virtual const std::type_info& type() const = 0;
 
-        // notify neighbors
-        virtual void notify_neighbors() const = 0;
-
         // neighboring factor nodes
         virtual const neighbors_t& neighbors() const = 0;
 };
@@ -153,7 +146,7 @@ inline variable_node_i* new_clone(const variable_node_i& a)
 // basic implementations of factor and variable nodes
 ////////////////////////////////////////////////////////////////////////////////
 
-class factor_node_t : public factor_node_i, public observable_t {
+class factor_node_t : public factor_node_i {
 public:
         factor_node_t(size_t k, const char* tags[], const std::string& name = "") :
                 _links       (k),
@@ -181,8 +174,6 @@ public:
 
         friend void swap(factor_node_t& left, factor_node_t& right) {
                 using std::swap;
-                swap(static_cast<observable_t&>(left),
-                     static_cast<observable_t&>(right));
                 swap(left._neighbors, right._neighbors);
                 swap(left._name,      right._name);
                 swap(left._links,     right._links);
@@ -197,15 +188,6 @@ public:
         }
         virtual const std::string& name() const {
                 return _name;
-        }
-        virtual void notify_neighbors(const variable_node_i& variable_node) const {
-                // notify all other neighbors about an update at node i
-                for (size_t i = 0; i < _neighbors.size(); i++) {
-                        if (_neighbors[i] != NULL && _neighbors[i] != &variable_node) {
-                                _neighbors[i]->notify();
-                        }
-                }
-                observable_t::notify();
         }
         virtual const neighbors_t& neighbors() const {
                 return _neighbors;
@@ -247,11 +229,10 @@ protected:
 };
 
 template <typename T>
-class variable_node_t : public variable_node_i, public observable_t {
+class variable_node_t : public variable_node_i {
 public:
         variable_node_t(const T& distribution, const std::string& name = "") :
                 variable_node_i(),
-                observable_t   (),
                 _name          (name),
                 _distribution  (distribution),
                 _message       (q_message_t(distribution.k())) {
@@ -263,7 +244,6 @@ public:
         }
         variable_node_t(const variable_node_t& variable_node) :
                 variable_node_i(variable_node),
-                observable_t   (variable_node),
                 _links         (),
                 _neighbors     (),
                 _name          (variable_node._name),
@@ -283,8 +263,6 @@ public:
 
         friend void swap(variable_node_t& left, variable_node_t& right) {
                 using std::swap;
-                swap(static_cast<observable_t&>(left),
-                     static_cast<observable_t&>(right));
                 swap(left._name,         right._name);
                 swap(left._links,        right._links);
                 swap(left._neighbors,    right._neighbors);
@@ -330,8 +308,6 @@ public:
                 debug(boost::format("variable node %s:%x has new message: ")
                       % name() % this << std::boolalpha
                       << (bool)_message << std::endl);
-                // check if this message was sent before
-                if (_message) notify_neighbors();
                 debug(boost::format("variable node %s:%x computed free energy: %d\n")
                       % name() % this % _distribution.entropy());
                 return _distribution.entropy();
@@ -339,11 +315,6 @@ public:
         virtual void condition(const std::matrix<double>& x);
         virtual const T& distribution() const {
                 return _distribution;
-        }
-        virtual void notify_neighbors() const {
-                for (size_t i = 0; i < neighbors().size(); i++) {
-                        neighbors()[i]->notify_neighbors(*this);
-                }
         }
         virtual double init(const T& distribution) {
                 _distribution = distribution;
@@ -403,8 +374,6 @@ public:
                         base_t::_message += statistics;
                 }
                 assert(x.size() == base_t::_message.n);
-        }
-        virtual void notify() const {
         }
 };
 
