@@ -38,6 +38,7 @@
 #include <fg/debug.hh>
 #include <fg/linalg.hh>
 #include <fg/named-ptr.hh>
+#include <fg/observable.hh>
 
 // links between nodes
 ////////////////////////////////////////////////////////////////////////////////
@@ -75,7 +76,7 @@ public:
 
 // a general node in a factor graph must be clonable
 // and be able to compute it's contribution to the free energy
-class fg_node_i : public virtual clonable {
+class fg_node_i : public virtual clonable, public virtual observable_i {
 public:
         virtual ~fg_node_i() { }
 
@@ -146,9 +147,11 @@ inline variable_node_i* new_clone(const variable_node_i& a)
 // basic implementations of factor and variable nodes
 ////////////////////////////////////////////////////////////////////////////////
 
-class factor_node_t : public factor_node_i {
+class factor_node_t : public factor_node_i, public observable_t {
 public:
         factor_node_t(size_t k, const char* tags[], const std::string& name = "") :
+                factor_node_i(),
+                observable_t (),
                 _links       (k),
                 _neighbors   (k, tags),
                 _name        (name) {
@@ -157,6 +160,7 @@ public:
         }
         factor_node_t(const factor_node_t& factor_node) :
                 factor_node_i(factor_node),
+                observable_t (factor_node),
                 // do not copy the links, since they should be
                 // populated manually to create a new network
                 _links       (factor_node._links.size()),
@@ -174,6 +178,8 @@ public:
 
         friend void swap(factor_node_t& left, factor_node_t& right) {
                 using std::swap;
+                swap(static_cast<observable_t&>(left),
+                     static_cast<observable_t&>(right));
                 swap(left._neighbors, right._neighbors);
                 swap(left._name,      right._name);
                 swap(left._links,     right._links);
@@ -193,6 +199,7 @@ public:
                 return _neighbors;
         }
         virtual double init(boost::random::mt19937& generator) {
+                notify();
                 return operator()();
         }
 protected:
@@ -229,10 +236,11 @@ protected:
 };
 
 template <typename T>
-class variable_node_t : public variable_node_i {
+class variable_node_t : public variable_node_i, public observable_t {
 public:
         variable_node_t(const T& distribution, const std::string& name = "") :
                 variable_node_i(),
+                observable_t   (),
                 _name          (name),
                 _distribution  (distribution),
                 _message       (q_message_t(distribution.k())) {
@@ -244,6 +252,7 @@ public:
         }
         variable_node_t(const variable_node_t& variable_node) :
                 variable_node_i(variable_node),
+                observable_t   (variable_node),
                 _links         (),
                 _neighbors     (),
                 _name          (variable_node._name),
@@ -263,6 +272,8 @@ public:
 
         friend void swap(variable_node_t& left, variable_node_t& right) {
                 using std::swap;
+                swap(static_cast<observable_t&>(left),
+                     static_cast<observable_t&>(right));
                 swap(left._name,         right._name);
                 swap(left._links,        right._links);
                 swap(left._neighbors,    right._neighbors);
@@ -317,6 +328,7 @@ public:
                 return _distribution;
         }
         virtual double init(const T& distribution) {
+                notify();
                 _distribution = distribution;
                 _message      = distribution.moments();
                 return distribution.entropy();

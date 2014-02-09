@@ -80,10 +80,18 @@ public:
 protected:
         factor_set_t _factor_nodes;
         variable_set_t _variable_nodes;
+        typedef std::vector<factor_node_i*> factor_queue_t;
+        typedef std::vector<variable_node_i*> variable_queue_t;
+        // the queues contain only those nodes that require updates
+        factor_queue_t _factor_queue;
+        variable_queue_t _variable_queue;
 private:
         // insert nodes without cloning them
         factor_graph_t& operator+=(factor_node_i* factor_node);
         factor_graph_t& operator+=(variable_node_i* variable_node);
+        // add a nodes to the queue
+        void add_factor_node(factor_node_i* factor_node);
+        void add_variable_node(variable_node_i* variable_node);
         // clone a whole network
         void clone_nodes(const factor_set_t& factor_nodes,
                          const variable_set_t& variable_nodes);

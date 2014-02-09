@@ -53,6 +53,7 @@ factor_graph_t&
 factor_graph_t::operator+=(factor_node_i* factor_node)
 {
         _factor_nodes += factor_node;
+        factor_node->observe(boost::bind(&factor_graph_t::add_factor_node, this, factor_node));
 
         return *this;
 }
@@ -67,6 +68,7 @@ factor_graph_t&
 factor_graph_t::operator+=(variable_node_i* variable_node)
 {
         _variable_nodes += variable_node;
+        variable_node->observe(boost::bind(&factor_graph_t::add_variable_node, this, variable_node));
 
         return *this;
 }
@@ -119,6 +121,10 @@ factor_graph_t::init()
 {
         boost::random::mt19937 generator;
         generator.seed(rand());
+        // empty queues
+          _factor_queue =   factor_queue_t();
+        _variable_queue = variable_queue_t();
+        // initialize nodes and queues
         for (variable_set_t::iterator it = _variable_nodes.begin();
              it != _variable_nodes.end(); it++) {
                 it->init(generator);
@@ -140,16 +146,16 @@ factor_graph_t::operator()(boost::optional<size_t> n) {
                       << std::endl);
                 // reset free energy
                 free_energy_new = 0.0;
-                for (variable_set_t::iterator it = _variable_nodes.begin();
-                     it != _variable_nodes.end(); it++) {
-                        free_energy_new += (*it)();
+                for (variable_queue_t::iterator it = _variable_queue.begin();
+                     it != _variable_queue.end(); it++) {
+                        free_energy_new += (**it)();
                 }
-                for (factor_set_t::iterator it = _factor_nodes.begin();
-                     it != _factor_nodes.end(); it++) {
-                        free_energy_new += (*it)();
+                for (factor_queue_t::iterator it = _factor_queue.begin();
+                     it != _factor_queue.end(); it++) {
+                        free_energy_new += (**it)();
                 }
                 history.push_back(free_energy_new);
-                if (std::fabs(free_energy_new - free_energy_old) < 0.01) {
+                if (!n && std::fabs(free_energy_new - free_energy_old) < 0.01) {
                         break;
                 }
                 free_energy_old = free_energy_new;
@@ -189,6 +195,20 @@ factor_graph_t::variable_node(const string& name, ssize_t i)
         }
         return boost::optional<variable_node_i&>();
 }
+
+void
+factor_graph_t::add_factor_node(factor_node_i* factor_node) {
+        debug(boost::format("*** adding factor node %s:%x to the queue ***\n")
+              % factor_node->name() % factor_node);
+        _factor_queue.push_back(factor_node);
+}
+
+void
+factor_graph_t::add_variable_node(variable_node_i* variable_node) {
+        debug(boost::format("*** adding variable node %s:%x to the queue ***\n")
+              % variable_node->name() % variable_node);
+        _variable_queue.push_back(variable_node);
+ }
 
 void
 factor_graph_t::clone_nodes(const factor_set_t& fnodes,

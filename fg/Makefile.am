@@ -22,6 +22,7 @@ libfg_la_SOURCES = \
 	messages.hh \
 	node-set.hh \
 	node-types.hh \
+	observable.hh \
 	variational.hh \
 	variational.cc
 libfg_la_LIBADD   = $(LIB_PTHREAD)
